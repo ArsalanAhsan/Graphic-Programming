@@ -32,6 +32,7 @@ class Renderer {
             -0.1f, 0.05f, 0.1f, 0.05f, 0.08f, -0.05f, 0.08f, -0.05f, 0.1f,
             0.05f, -0.08f, 0.05f, -0.1f, -0.05f, -0.1f, -0.05f, -0.08f, 0.05f,
             0.01f, 0.05f, -0.01f, -0.05f, -0.01f, -0.05f, 0.01f};
+
     // Helper method to draw a quad based on vertex data
     private void drawQuad(GL2 gl, float[] vertices) {
         gl.glBegin(GL_QUADS);
@@ -75,10 +76,16 @@ class Renderer {
         drawQuad(gl, ballData);
         gl.glPopMatrix();
 
-        // Draw score "1" at the top center as an example
+        // Draw score for Player 1 on the left
         gl.glPushMatrix();
-        gl.glTranslatef(0.0f, 0.8f, 0.0f);
+        gl.glTranslatef(-0.2f, 0.8f, 0.0f); // Position score on the top left
         drawQuad(gl, score1Data);
+        gl.glPopMatrix();
+
+        // Draw score for Player 2 on the right
+        gl.glPushMatrix();
+        gl.glTranslatef(0.2f, 0.8f, 0.0f); // Position score on the top right
+        drawQuad(gl, score3Data); // Use score data for player 2
         gl.glPopMatrix();
     }
 
