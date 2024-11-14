@@ -10,7 +10,14 @@ class Renderer implements KeyListener {
 
     private static final float[] barData = { 0.02f, 0.2f, -0.02f, 0.2f, -0.02f, -0.2f, 0.02f, -0.2f };
     private static final float[] ballData = { 0.02f, 0.02f, -0.02f, 0.02f, -0.02f, -0.02f, 0.02f, -0.02f };
-    private static final float[] score1Data = { 0.01f, 0.1f, -0.01f, 0.1f, -0.01f, -0.1f, 0.01f, -0.1f };
+
+    // Score digit representations (0, 1, 2, 3)
+    private static final float[][] scoreDigits = {
+            { 0.06f, 0.1f, 0.04f, 0.1f, 0.04f, -0.1f, 0.06f, -0.1f, -0.04f, 0.1f, -0.06f, 0.1f, -0.06f, -0.1f, -0.04f, -0.1f },
+            { 0.01f, 0.1f, -0.01f, 0.1f, -0.01f, -0.1f, 0.01f, -0.1f },
+            { 0.06f, 0.1f, 0.04f, 0.1f, 0.04f, 0.0f, 0.06f, 0.0f, -0.04f, 0.0f, -0.06f, 0.0f, -0.06f, -0.1f, -0.04f, -0.1f },
+            { 0.06f, 0.1f, 0.04f, 0.1f, 0.04f, -0.1f, 0.06f, -0.1f, 0.05f, 0.1f, 0.05f, 0.08f, -0.05f, 0.08f, -0.05f, 0.1f }
+    };
 
     private float leftPaddleY = 0.0f;
     private float rightPaddleY = 0.0f;
@@ -101,11 +108,9 @@ class Renderer implements KeyListener {
         drawQuad(gl, ballData);
         gl.glPopMatrix();
 
-        // Draw score "1" as an example
-        gl.glPushMatrix();
-        gl.glTranslatef(0.0f, 0.8f, 0.0f);
-        drawQuad(gl, score1Data);
-        gl.glPopMatrix();
+        // Draw scores
+        drawScore(gl, -0.2f, 0.8f, leftScore);
+        drawScore(gl, 0.2f, 0.8f, rightScore);
     }
 
     private void resetBall() {
@@ -113,6 +118,16 @@ class Renderer implements KeyListener {
         ballY = 0.0f;
         ballDirX = (Math.random() > 0.5 ? 0.01f : -0.01f);
         ballDirY = (Math.random() > 0.5 ? 0.01f : -0.01f);
+    }
+
+    // Method to draw score based on current score value
+    private void drawScore(GL2 gl, float x, float y, int score) {
+        if (score >= 0 && score <= 3) {
+            gl.glPushMatrix();
+            gl.glTranslatef(x, y, 0.0f);
+            drawQuad(gl, scoreDigits[score]);
+            gl.glPopMatrix();
+        }
     }
 
     public void dispose(GLAutoDrawable d) {}
