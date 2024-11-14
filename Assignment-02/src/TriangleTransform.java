@@ -1,45 +1,93 @@
-import java.awt.*;
 import javax.swing.*;
+import java.awt.event.KeyAdapter;
+import java.awt.event.KeyEvent;
 import com.jogamp.opengl.*;
-import com.jogamp.opengl.awt.GLCanvas;
 import com.jogamp.opengl.awt.GLJPanel;
 import com.jogamp.opengl.util.FPSAnimator;
-import static com.jogamp.opengl.GL2.*;
 
 class Renderer {
 
-    float[] barData = { 0.02f, 0.2f, -0.02f, 0.2f, -0.02f, -0.2f, 0.02f, -0.2f };
+    private float ballX = 0.0f, ballY = 0.0f;
+    private float ballDX = 0.01f, ballDY = 0.01f;
+    private float leftBatY = 0.0f, rightBatY = 0.0f;
+    private float batSpeed = 0.03f;
+    private boolean leftBatUp, leftBatDown, rightBatUp, rightBatDown;
+    private int leftScore = 0, rightScore = 0;
+    private boolean gameStarted = false;
+    private boolean gameWon = false;
 
-    float[] ballData = { 0.02f, 0.02f, -0.02f, 0.02f, -0.02f, -0.02f, 0.02f, -0.02f };
-
-    float[] score0Data = { 0.06f, 0.1f, 0.04f, 0.1f, 0.04f, -0.1f, 0.06f,
-            -0.1f, -0.04f, 0.1f, -0.06f, 0.1f, -0.06f, -0.1f, -0.04f, -0.1f,
-            0.05f, 0.1f, 0.05f, 0.08f, -0.05f, 0.08f, -0.05f, 0.1f, 0.05f,
-            -0.08f, 0.05f, -0.1f, -0.05f, -0.1f, -0.05f, -0.08f };
-
-    float[] score1Data = { 0.01f, 0.1f, -0.01f, 0.1f, -0.01f, -0.1f, 0.01f,
-            -0.1f };
-
-    float[] score2Data = { 0.06f, 0.1f, 0.04f, 0.1f, 0.04f, 0.0f,
-            0.06f, 0.0f, -0.04f, 0.0f, -0.06f, 0.0f,
-            -0.06f, -0.1f, -0.04f, -0.1f, 0.05f, 0.1f, 0.05f,
-            0.08f, -0.05f, 0.08f, -0.05f, 0.1f, 0.05f, -0.08f, 0.05f,
-            -0.1f, -0.05f, -0.1f, -0.05f, -0.08f, 0.05f,
-            0.01f, 0.05f, -0.01f, -0.05f, -0.01f, -0.05f,
-            0.01f };
-
-    float[] score3Data = { 0.06f, 0.1f, 0.04f, 0.1f, 0.04f, -0.1f, 0.06f,
-            -0.1f, 0.05f, 0.1f, 0.05f, 0.08f, -0.05f, 0.08f, -0.05f, 0.1f,
-            0.05f, -0.08f, 0.05f, -0.1f, -0.05f, -0.1f, -0.05f, -0.08f, 0.05f,
-            0.01f, 0.05f, -0.01f, -0.05f, -0.01f, -0.05f, 0.01f};
-
-    // Helper method to draw a quad based on vertex data
-    private void drawQuad(GL2 gl, float[] vertices) {
-        gl.glBegin(GL_QUADS);
-        for (int i = 0; i < vertices.length; i += 2) {
-            gl.glVertex2f(vertices[i], vertices[i + 1]);
+    // Method to draw a quad using 2D coordinates
+    private void drawQuad(GL2 gl, float[] data) {
+        gl.glBegin(GL2.GL_QUADS);
+        for (int i = 0; i < data.length; i += 2) {
+            gl.glVertex2f(data[i], data[i + 1]);
         }
         gl.glEnd();
+    }
+
+    private void drawBat(GL2 gl) {
+        gl.glPushMatrix();
+        gl.glTranslatef(-0.9f, leftBatY, 0.0f);
+        drawQuad(gl, PongArrays.barData);
+        gl.glPopMatrix();
+
+        gl.glPushMatrix();
+        gl.glTranslatef(0.9f, rightBatY, 0.0f);
+        drawQuad(gl, PongArrays.barData);
+        gl.glPopMatrix();
+    }
+
+    private void drawBall(GL2 gl) {
+        gl.glPushMatrix();
+        gl.glTranslatef(ballX, ballY, 0.0f);
+        drawQuad(gl, PongArrays.ballData);
+        gl.glPopMatrix();
+    }
+
+    private void moveBats() {
+        if (leftBatUp && leftBatY < 0.8f) leftBatY += batSpeed;
+        if (leftBatDown && leftBatY > -0.8f) leftBatY -= batSpeed;
+        if (rightBatUp && rightBatY < 0.8f) rightBatY += batSpeed;
+        if (rightBatDown && rightBatY > -0.8f) rightBatY -= batSpeed;
+    }
+
+    private void moveBall() {
+        ballX += ballDX;
+        ballY += ballDY;
+
+
+        if (ballY >= 1.0f || ballY <= -1.0f) {
+            ballDY = -ballDY;
+        }
+
+        // Reflect ball on bats
+        if (ballX <= -0.88f && Math.abs(ballY - leftBatY) < 0.2f) { // Left bat
+            ballDX = -ballDX;
+        }
+        if (ballX >= 0.88f && Math.abs(ballY - rightBatY) < 0.2f) { // Right bat
+            ballDX = -ballDX;
+        }
+
+
+        if (ballX < -1.0f) {
+            rightScore++;
+            resetBall();
+        } else if (ballX > 1.0f) {
+            leftScore++;
+            resetBall();
+        }
+
+
+        if (leftScore == 3 || rightScore == 3) {
+            gameWon = true;
+            gameStarted = false; // Stop the game
+        }
+    }
+
+    private void resetBall() {
+        ballX = 0.0f;
+        ballY = 0.0f;
+        ballDX = (ballDX > 0 ? -0.01f : 0.01f);
     }
 
     public void init(GLAutoDrawable d) {}
@@ -51,45 +99,63 @@ class Renderer {
 
     public void display(GLAutoDrawable d) {
         GL2 gl = d.getGL().getGL2();
-        gl.glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
-        gl.glClear(GL_COLOR_BUFFER_BIT);
+        gl.glClear(GL.GL_COLOR_BUFFER_BIT);
         gl.glLoadIdentity();
         gl.glOrtho(-1.0f, 1.0f, -1.0f, 1.0f, -1.0f, 1.0f);
 
         gl.glColor3f(1.0f, 1.0f, 1.0f);
+        drawBat(gl);
+        drawBall(gl);
 
-        // Draw left paddle
+        if (gameStarted) {
+            moveBats();
+            moveBall();
+        }
+
+
+        drawScore(gl);
+    }
+
+    private void drawScore(GL2 gl) {
+        // Left score
         gl.glPushMatrix();
-        gl.glTranslatef(-0.9f, 0.0f, 0.0f); // Position paddle on the left
-        drawQuad(gl, barData);
+        gl.glTranslatef(-0.5f, 0.9f, 0.0f);
+        drawQuad(gl, PongArrays.getScoreData(leftScore));
         gl.glPopMatrix();
 
-        // Draw right paddle
+        // Right score
         gl.glPushMatrix();
-        gl.glTranslatef(0.9f, 0.0f, 0.0f); // Position paddle on the right
-        drawQuad(gl, barData);
-        gl.glPopMatrix();
-
-        // Draw ball in the center
-        gl.glPushMatrix();
-        gl.glTranslatef(0.0f, 0.0f, 0.0f);
-        drawQuad(gl, ballData);
-        gl.glPopMatrix();
-
-        // Draw score for Player 1 on the left
-        gl.glPushMatrix();
-        gl.glTranslatef(-0.2f, 0.8f, 0.0f); // Position score on the top left
-        drawQuad(gl, score1Data);
-        gl.glPopMatrix();
-
-        // Draw score for Player 2 on the right
-        gl.glPushMatrix();
-        gl.glTranslatef(0.2f, 0.8f, 0.0f); // Position score on the top right
-        drawQuad(gl, score3Data); // Use score data for player 2
+        gl.glTranslatef(0.5f, 0.9f, 0.0f);
+        drawQuad(gl, PongArrays.getScoreData(rightScore));
         gl.glPopMatrix();
     }
 
     public void dispose(GLAutoDrawable d) {}
+
+    public void setGameStarted(boolean started) {
+        gameStarted = started;
+    }
+
+    public void setBatMovement(int bat, boolean up, boolean moving) {
+        if (bat == 0) { // Left bat
+            if (up) leftBatUp = moving;
+            else leftBatDown = moving;
+        } else { // Right bat
+            if (up) rightBatUp = moving;
+            else rightBatDown = moving;
+        }
+    }
+
+    public void resetGame() {
+        leftScore = 0;
+        rightScore = 0;
+        gameWon = false;
+        resetBall();
+    }
+
+    public boolean isGameWon() {
+        return gameWon;
+    }
 }
 
 class MyGui extends JFrame implements GLEventListener {
@@ -103,12 +169,59 @@ class MyGui extends JFrame implements GLEventListener {
         GLProfile glp = GLProfile.getDefault();
         GLCapabilities caps = new GLCapabilities(glp);
         GLJPanel canvas = new GLJPanel(caps);
-        setSize(400, 400);
+        setSize(320, 320);
         getContentPane().add(canvas);
         final FPSAnimator ani = new FPSAnimator(canvas, 60, true);
         canvas.addGLEventListener(this);
+
+        canvas.addKeyListener(new KeyAdapter() {
+            @Override
+            public void keyPressed(KeyEvent e) {
+                switch (e.getKeyCode()) {
+                    case KeyEvent.VK_SPACE:
+                        if (renderer.isGameWon()) {
+                            renderer.resetGame();
+                        }
+                        renderer.setGameStarted(true);
+                        break;
+                    case KeyEvent.VK_W:
+                        renderer.setBatMovement(0, true, true);
+                        break;
+                    case KeyEvent.VK_S:
+                        renderer.setBatMovement(0, false, true);
+                        break;
+                    case KeyEvent.VK_P:
+                        renderer.setBatMovement(1, true, true);
+                        break;
+                    case KeyEvent.VK_L:
+                        renderer.setBatMovement(1, false, true);
+                        break;
+                }
+            }
+
+            @Override
+            public void keyReleased(KeyEvent e) {
+                switch (e.getKeyCode()) {
+                    case KeyEvent.VK_W:
+                        renderer.setBatMovement(0, true, false);
+                        break;
+                    case KeyEvent.VK_S:
+                        renderer.setBatMovement(0, false, false);
+                        break;
+                    case KeyEvent.VK_P:
+                        renderer.setBatMovement(1, true, false);
+                        break;
+                    case KeyEvent.VK_L:
+                        renderer.setBatMovement(1, false, false);
+                        break;
+                }
+            }
+        });
+
         setVisible(true);
         renderer = new Renderer();
+        canvas.setFocusable(true);
+        canvas.requestFocusInWindow();
         ani.start();
     }
 
@@ -136,7 +249,7 @@ class MyGui extends JFrame implements GLEventListener {
 public class TriangleTransform {
     public static void main(String[] args) {
         System.setProperty("sun.java2d.uiScale", "1.0");
-        SwingUtilities.invokeLater(() -> {
+        javax.swing.SwingUtilities.invokeLater(() -> {
             MyGui myGUI = new MyGui();
             myGUI.createGUI();
         });
